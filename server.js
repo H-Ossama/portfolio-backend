@@ -1738,6 +1738,12 @@ app.use(errorHandler);
 // Initialize cron jobs
 initCronJobs();
 
+
+app.get('/', (req, res) => {
+  res.send('Backend is running!'); // Health check endpoint
+});
+
+
 // Start server
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
