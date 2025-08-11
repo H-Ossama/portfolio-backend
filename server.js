@@ -234,6 +234,48 @@ const errorHandler = (err, req, res, next) => {
 // API Routes
 app.use('/api/translations', translationsRouter);
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        port: PORT,
+        environment: process.env.NODE_ENV || 'development',
+        frontend_path: path.join(__dirname, '../frontend'),
+        working_directory: __dirname
+    });
+});
+
+// Root route handler - serve the main portfolio page
+app.get('/', (req, res) => {
+    try {
+        const indexPath = path.join(__dirname, '../frontend/index.html');
+        console.log('Serving index.html from:', indexPath);
+        res.sendFile(indexPath);
+    } catch (error) {
+        console.error('Error serving index.html:', error);
+        res.status(500).send('Error loading page');
+    }
+});
+
+// Catch-all handler for frontend routes (SPA routing)
+app.get('*', (req, res) => {
+    // Don't serve index.html for API routes
+    if (req.path.startsWith('/api/')) {
+        console.log('API route not found:', req.path);
+        return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    // For all other routes, serve the main app
+    try {
+        const indexPath = path.join(__dirname, '../frontend/index.html');
+        console.log('Catch-all: serving index.html for path:', req.path);
+        res.sendFile(indexPath);
+    } catch (error) {
+        console.error('Error in catch-all handler:', error);
+        res.status(500).send('Error loading page');
+    }
+});
+
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -1739,12 +1781,27 @@ app.use(errorHandler);
 initCronJobs();
 
 
-app.get('/', (req, res) => {
-  res.send('Backend is running!'); // Health check endpoint
-});
-
 
 // Start server
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Working directory: ${__dirname}`);
+    console.log(`Frontend path: ${path.join(__dirname, '../frontend')}`);
+    console.log(`Health check available at: http://localhost:${PORT}/health`);
+    
+    // Check if frontend directory exists
+    const fs = require('fs');
+    const frontendPath = path.join(__dirname, '../frontend');
+    if (fs.existsSync(frontendPath)) {
+        console.log('✅ Frontend directory found');
+        const indexPath = path.join(frontendPath, 'index.html');
+        if (fs.existsSync(indexPath)) {
+            console.log('✅ index.html found');
+        } else {
+            console.log('❌ index.html NOT found');
+        }
+    } else {
+        console.log('❌ Frontend directory NOT found');
+    }
 });
